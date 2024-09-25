@@ -1,6 +1,4 @@
-// frontend/src/App.js
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Plot from "react-plotly.js";
 
@@ -13,6 +11,10 @@ function App() {
   const [finished, setFinished] = useState(false);
   const [isValidK, setIsValidK] = useState(true);
 
+  // Reference to the Plot component
+  const plotRef = useRef(null);
+
+  // Generate initial data when component mounts
   useEffect(() => {
     generateData();
   }, []);
@@ -94,6 +96,7 @@ function App() {
 
   const handleInitMethodChange = (e) => {
     setInitMethod(e.target.value);
+    // Reset algorithm state
     setCentroids([]);
     setLabels([]);
     setFinished(false);
@@ -112,23 +115,58 @@ function App() {
 
   const handlePlotClick = (event) => {
     if (initMethod !== "manual" || centroids.length >= k) return;
-    const x = event.points[0].x;
-    const y = event.points[0].y;
-    const newCentroids = [...centroids, [x, y]];
-    setCentroids(newCentroids);
-    if (newCentroids.length === k) {
-      axios
-        .post("/initialize", {
-          k: k,
-          init_method: "manual",
-          centroids: newCentroids,
-        })
-        .then(() => {
-          setFinished(false);
-        })
-        .catch((error) => {
-          console.error("Error initializing with manual centroids:", error);
-        });
+
+    const gd = plotRef.current && plotRef.current.el;
+
+    if (gd) {
+      const xaxis = gd._fullLayout.xaxis;
+      const yaxis = gd._fullLayout.yaxis;
+
+      // Get the plot area element
+      const plotArea = gd.querySelector(".nsewdrag");
+
+      if (!plotArea) {
+        console.error("Plot area not found");
+        return;
+      }
+
+      const plotRect = plotArea.getBoundingClientRect();
+
+      // Get mouse position relative to the plot area
+      const mouseX = event.event.clientX - plotRect.left;
+      const mouseY = event.event.clientY - plotRect.top;
+
+      // Convert pixel positions to data coordinates
+      const xInDataCoord = xaxis.p2d(mouseX);
+      const yInDataCoord = yaxis.p2d(mouseY);
+
+      // Ensure the clicked point is within the plot area
+      if (
+        xInDataCoord < Math.min(...xaxis.range) ||
+        xInDataCoord > Math.max(...xaxis.range) ||
+        yInDataCoord < Math.min(...yaxis.range) ||
+        yInDataCoord > Math.max(...yaxis.range)
+      ) {
+        return;
+      }
+
+      const newCentroids = [...centroids, [xInDataCoord, yInDataCoord]];
+      setCentroids(newCentroids);
+
+      if (newCentroids.length === k) {
+        axios
+          .post("/initialize", {
+            k: k,
+            init_method: "manual",
+            centroids: newCentroids,
+          })
+          .then(() => {
+            setFinished(false);
+          })
+          .catch((error) => {
+            console.error("Error initializing with manual centroids:", error);
+          });
+      }
     }
   };
 
@@ -173,6 +211,13 @@ function App() {
     return traces;
   };
 
+  const plotLayout = {
+    width: 700,
+    height: 500,
+    title: "KMeans Clustering",
+    clickmode: "event",
+  };
+
   return (
     <div>
       <h1>KMeans Clustering Visualization</h1>
@@ -214,8 +259,10 @@ function App() {
       </div>
       <Plot
         data={plotData()}
-        layout={{ width: 700, height: 500, title: "KMeans Clustering" }}
+        layout={plotLayout}
         onClick={handlePlotClick}
+        ref={plotRef}
+        config={{ responsive: true }}
         key={dataPoints.length}
       />
     </div>
