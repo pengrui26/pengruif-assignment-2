@@ -1,0 +1,38 @@
+name: Python Flask App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm install
+
+    - name: Run the application
+      run: |
+        cd backend
+        source venv/bin/activate
+        FLASK_APP=app.py flask run --port=5000 &
+        cd ../frontend
+        npm start &
+        sleep 15
