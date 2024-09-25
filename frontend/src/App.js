@@ -1,6 +1,6 @@
 // frontend/src/App.js
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Plot from "react-plotly.js";
 
@@ -11,12 +11,15 @@ function App() {
   const [initMethod, setInitMethod] = useState("random");
   const [k, setK] = useState(3);
   const [finished, setFinished] = useState(false);
-  const [isValidK, setIsValidK] = useState(true); // New state to track if k is valid
+  const [isValidK, setIsValidK] = useState(true);
 
-  const generateData = useCallback(() => {
-    if (!isValidK) return;
+  useEffect(() => {
+    generateData();
+  }, []);
+
+  const generateData = () => {
     axios
-      .get("/generate-data", { params: { centers: k, samples: 300 } })
+      .get("/generate-data", { params: { samples: 300 } })
       .then((response) => {
         setDataPoints(response.data.data);
         resetAlgorithm();
@@ -24,11 +27,7 @@ function App() {
       .catch((error) => {
         console.error("Error generating data:", error);
       });
-  }, [k, isValidK]);
-
-  useEffect(() => {
-    generateData();
-  }, [generateData]);
+  };
 
   const initialize = () => {
     if (!isValidK) {
@@ -95,6 +94,9 @@ function App() {
 
   const handleInitMethodChange = (e) => {
     setInitMethod(e.target.value);
+    setCentroids([]);
+    setLabels([]);
+    setFinished(false);
   };
 
   const handleKChange = (e) => {
@@ -121,7 +123,7 @@ function App() {
           init_method: "manual",
           centroids: newCentroids,
         })
-        .then((response) => {
+        .then(() => {
           setFinished(false);
         })
         .catch((error) => {
@@ -189,6 +191,7 @@ function App() {
           onChange={handleKChange}
           min="1"
           max="10"
+          step="1"
         />
       </div>
       {!isValidK && (
@@ -197,9 +200,7 @@ function App() {
         </p>
       )}
       <div>
-        <button onClick={generateData} disabled={!isValidK}>
-          Generate New Dataset
-        </button>
+        <button onClick={generateData}>Generate New Dataset</button>
         <button onClick={initialize} disabled={!isValidK}>
           Initialize
         </button>
@@ -215,6 +216,7 @@ function App() {
         data={plotData()}
         layout={{ width: 700, height: 500, title: "KMeans Clustering" }}
         onClick={handlePlotClick}
+        key={dataPoints.length}
       />
     </div>
   );

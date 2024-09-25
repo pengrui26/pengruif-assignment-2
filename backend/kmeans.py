@@ -21,7 +21,7 @@ class KMeans:
         elif self.init_method == 'kmeans++':
             self.centroids = self.kmeans_plus_plus_initialization()
         else:
-            self.centroids = []  # 手动初始化将在前端处理
+            self.centroids = []  
         return self.centroids.tolist()
 
     def farthest_first_initialization(self):
@@ -56,7 +56,6 @@ class KMeans:
             if len(points) > 0:
                 new_centroid = points.mean(axis=0)
             else:
-                # 如果一个簇没有数据点，随机重新初始化质心
                 new_centroid = self.data[np.random.randint(self.data.shape[0])]
             new_centroids.append(new_centroid)
         new_centroids = np.array(new_centroids)

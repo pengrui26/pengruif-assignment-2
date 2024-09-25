@@ -6,27 +6,30 @@ from kmeans import KMeans
 import numpy as np
 
 app = Flask(__name__)
-CORS(app)  # 允许跨域请求
+CORS(app)  # Enable CORS for cross-origin requests
 
-# 全局变量，存储数据集和算法状态
+
+# Global variables to store the dataset and KMeans instance
 data = []
 kmeans_instance = None
 
 @app.route('/generate-data', methods=['GET'])
 def generate_data():
-    from sklearn.datasets import make_blobs
     global data
-    centers = int(request.args.get('centers', 3))
     n_samples = int(request.args.get('samples', 300))
-    X, _ = make_blobs(n_samples=n_samples, centers=centers, n_features=2, random_state=42)
-    data = X.tolist()
+
+    # Generate random data uniformly distributed between -100 and 100 for x and y axes
+    X = np.random.uniform(-100, 100, size=(n_samples, 2))
+
+    data = X.tolist()  # Store the data as a list of points
+
     return jsonify({'data': data})
 
 @app.route('/initialize', methods=['POST'])
 def initialize():
     global kmeans_instance
     params = request.get_json()
-    k = params.get('k', 3)
+    k = int(params.get('k', 3))
     init_method = params.get('init_method', 'random')
     centroids = params.get('centroids', None)
     kmeans_instance = KMeans(k=k, init_method=init_method, data=data)
@@ -70,4 +73,4 @@ def reset():
     return jsonify({'status': 'reset successful'})
 
 if __name__ == '__main__':
-    app.run(port=8000)
+    app.run(port=8000, debug=True)
